@@ -19,6 +19,8 @@ export default function Map() {
   const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
   const [selectedColor, setSelectedColor] = useState<string>("#ef4444"); // red
   const [selectedShape, setSelectedShape] = useState<"circle" | "square" | "star">("circle");
+  const [locating, setLocating] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
 
   // Keep the latest selection in refs so the map click handler
   // always uses the current values, even after re-renders.
@@ -97,7 +99,7 @@ export default function Map() {
   };
 
   return (
-    <div style={{ width: "100%", height: "540px", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+    <div style={{ width: "100%", height: "700px", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
       <div
         style={{
           display: "flex",
@@ -153,23 +155,89 @@ export default function Map() {
             </button>
           ))}
         </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            setLocationError(null);
+            if (!navigator.geolocation) {
+              setLocationError("Geolocation is not supported in this browser.");
+              return;
+            }
+
+            setLocating(true);
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                setLocating(false);
+                const { latitude, longitude } = pos.coords;
+                const map = mapInstanceRef.current;
+                if (!map) return;
+
+                const position = { lat: latitude, lng: longitude };
+                map.setCenter(position);
+                map.setZoom(14);
+
+                const userMarker = new window.google.maps.Marker({
+                  position,
+                  map,
+                  icon: {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    fillColor: "#0ea5e9",
+                    fillOpacity: 1,
+                    strokeWeight: 2,
+                    strokeColor: "#0369a1",
+                    scale: 10,
+                  },
+                  title: "Your location",
+                });
+
+                setMarkers((prev) => [...prev, userMarker]);
+              },
+              (err) => {
+                setLocating(false);
+                setLocationError(err.message || "Unable to retrieve your location.");
+              }
+            );
+          }}
+          style={{
+            marginLeft: "auto",
+            padding: "0.35rem 0.9rem",
+            borderRadius: "999px",
+            border: "1px solid #0f766e",
+            backgroundColor: "#14b8a6",
+            color: "white",
+            fontSize: "0.8rem",
+            fontWeight: 500,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.25rem",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {locating ? "Locating..." : "Show my location"}
+        </button>
       </div>
 
+      {locationError && (
+        <p style={{ color: "#b91c1c", fontSize: "0.8rem" }}>{locationError}</p>
+      )}
+
       <div style={{ width: "100%", height: "100%" }}>
-      <Script
-        src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`}
-        strategy="afterInteractive"
-        onLoad={handleScriptLoad}
-      />
-      <div
-        ref={mapContainerRef}
-        style={{
-          width: "100%",
-          height: "100%",
-          borderRadius: "8px",
-          border: "1px solid #e5e7eb",
-        }}
-      />
+        <Script
+          src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`}
+          strategy="afterInteractive"
+          onLoad={handleScriptLoad}
+        />
+        <div
+          ref={mapContainerRef}
+          style={{
+            width: "100%",
+            height: "100%",
+            borderRadius: "8px",
+            border: "1px solid #e5e7eb",
+          }}
+        />
       </div>
     </div>
   );
