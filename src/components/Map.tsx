@@ -96,12 +96,6 @@ export default function Map() {
     });
   };
 
-  useEffect(() => {
-    return () => {
-      markers.forEach((marker) => marker.setMap(null));
-    };
-  }, [markers]);
-
   return (
     <div style={{ width: "100%", height: "540px", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
       <div
